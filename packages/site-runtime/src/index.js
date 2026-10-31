@@ -31,6 +31,8 @@
   // Content tabs remain independent: their labels may describe unrelated topics.
   const codePreferenceKey = "paglora:code-language:" + siteRoot;
   const codeGroups = [];
+  // Fragment navigation can point inside a hidden code or content tab.
+  const fragmentPanels = new Map();
   function codeLabel(value) {
     if (typeof value !== "string" || value.length > 100) return null;
     const normalized = value.trim().normalize("NFKC").toLocaleLowerCase();
@@ -238,6 +240,7 @@
     }
     container.before(tablist);
     codeGroups.push({ activateLabel });
+    panels.forEach((panel, index) => fragmentPanels.set(panel, () => activate(index)));
     // Always establish a valid initial tab before applying a saved preference.
     // A different page may not offer the preferred language at all.
     activate(0);
@@ -297,9 +300,37 @@
     }
     container.before(tablist);
     activate(0);
+    panels.forEach((panel, index) => fragmentPanels.set(panel, () => activate(index)));
     group.classList.add("paglora-tabs-enhanced");
   }
 
+
+  // Reveal a fragment target inside an inactive code/content tab. The browser
+  // may have tried to scroll before deferred scripts enhanced those panels.
+  // Walk from the target outward and activate ancestor panels outermost first.
+  function revealFragmentTarget() {
+    const hash = typeof location.hash === "string" ? location.hash : "";
+    if (hash.length < 2 || hash.length > 2048) return;
+    let id;
+    try { id = decodeURIComponent(hash.slice(1)); } catch { return; }
+    if (!id || id.length > 512) return;
+    const target = document.getElementById?.(id);
+    if (!target) return;
+    const selections = [];
+    for (let node = target; node; node = node.parentElement) {
+      const activate = fragmentPanels.get(node);
+      if (activate && node.hidden) selections.push(activate);
+    }
+    if (!selections.length) return;
+    for (const activate of selections.reverse()) activate();
+    // A permalink must not change the stored code-language preference, steal
+    // keyboard focus, or override a more recent fragment navigation.
+    requestAnimationFrame(() => {
+      if (location.hash === hash) target.scrollIntoView?.({ block: "start" });
+    });
+  }
+  addEventListener("hashchange", revealFragmentTarget);
+  revealFragmentTarget();
 
   // Print and Save as PDF must include every example and FAQ answer, even
   // when interactive tabs/accordions are collapsed on screen. Keep an exact
@@ -445,12 +476,14 @@
   let scheduled = false;
   function markActiveHeading() {
     scheduled = false;
-    let activeHeading = items[0].heading;
+    let activeHeading = null;
     let closestPassed = -Infinity;
     let closestUpcoming = Infinity;
     // Desktop and mobile TOCs duplicate headings and may be ordered differently.
-    // Select by actual viewport position, not whichever duplicate appears last.
+    // Ignore headings in inactive tab panels, even when they appear earlier.
     for (const item of items) {
+      if (item.heading.closest?.("[hidden]")) continue;
+      if (!activeHeading) activeHeading = item.heading;
       const top = item.heading.getBoundingClientRect().top;
       if (top <= 140 && top > closestPassed) {
         closestPassed = top;
