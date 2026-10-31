@@ -6,7 +6,8 @@ test("components no longer consult ProseMirror validity or a string-fingerprint 
   const app = read("src/App.tsx");
   const palette = read("src/components/editor/block-palette.tsx");
   const model = read("src/lib/component-source-model.ts");
-  assert.match(app, /insertComponentAtBoundary\(latest\.current, kind, boundary\)/);
+  assert.match(app, /const before = latest\.current;/);
+  assert.match(app, /insertComponentAtBoundary\(before, kind, boundary\)/);
   assert.doesNotMatch(app, /insertAtSourcePosition|appendComponentToMarkdown/);
   assert.doesNotMatch(palette, /invalidVisualTree|onInvalidDocument|insertBlockIntoEditor/);
   assert.doesNotMatch(model, /textContent|\.state\.doc|nodeDOM/);

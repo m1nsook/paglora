@@ -2,18 +2,22 @@ import { useMemo } from "react";
 import { marked } from "marked";
 import { renderPageContent } from "@/lib/site";
 import { parseSourceComponents } from "@/lib/component-source-model";
-import { Plus } from "lucide-react";
+import { Plus, Redo2, Undo2 } from "lucide-react";
 
 /** The component canvas renders the real Markdown, not Tiptap's parsed tree.
  * Every insertion target belongs to the same token sequence used for saving.
  */
 export function SourceComponentCanvas({
-  source, selectedBoundary, onSelectBoundary, onEditText,
+  source, selectedBoundary, onSelectBoundary, onEditText, canUndo, canRedo, onUndo, onRedo,
 }: {
   source: string;
   selectedBoundary: number;
   onSelectBoundary: (boundary: number) => void;
   onEditText: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
+  onUndo: () => void;
+  onRedo: () => void;
 }) {
   const blocks = useMemo(() => parseSourceComponents(source).blocks.map(block => ({
     ...block,
@@ -41,9 +45,21 @@ export function SourceComponentCanvas({
       className="mx-auto w-full max-w-3xl px-6 pb-28 pt-6 lg:px-10"
       aria-label="Documentation component composer">
       <div className="mb-5 flex items-center justify-between gap-3 rounded-lg border border-border bg-muted/40 px-4 py-3 text-xs text-muted-foreground">
-        <span>Select a block or an insertion line, then click a component; or drag a component directly here.</span>
-        <button type="button" className="shrink-0 font-medium text-primary hover:underline"
-          onClick={onEditText}>Write text</button>
+        <span>Select an insertion line, then click or drag a component here.</span>
+        <div className="flex shrink-0 items-center gap-1">
+          <button type="button" onClick={onUndo} disabled={!canUndo}
+            aria-label="Undo component change" title="Undo component change (Ctrl/Cmd+Z)"
+            className="rounded-md p-2 text-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-40">
+            <Undo2 className="size-4" aria-hidden="true" />
+          </button>
+          <button type="button" onClick={onRedo} disabled={!canRedo}
+            aria-label="Redo component change" title="Redo component change (Ctrl/Cmd+Shift+Z)"
+            className="rounded-md p-2 text-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-40">
+            <Redo2 className="size-4" aria-hidden="true" />
+          </button>
+          <button type="button" className="ml-2 font-medium text-primary hover:underline"
+            onClick={onEditText}>Write text</button>
+        </div>
       </div>
       {slot(0)}
       {blocks.length === 0 && (

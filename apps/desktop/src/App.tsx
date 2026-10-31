@@ -21,6 +21,7 @@ import { FormatToolbar } from "@/components/editor/format-toolbar";
 import { BlockPalette } from "@/components/editor/block-palette";
 import type { BlockKind } from "@/components/editor/block-catalog";
 import { insertComponentAtBoundary, parseSourceComponents } from "@/lib/component-source-model";
+import { createComponentEditHistory, recordComponentEdit, undoComponentEdit, redoComponentEdit } from "@/lib/component-edit-history";
 import { SourceComponentCanvas } from "@/components/editor/source-component-canvas";
 import { SiteBuilder } from "@/components/editor/site-builder";
 import { SitePreview } from "@/components/editor/site-preview";
@@ -94,6 +95,7 @@ function CreateProjectDialog({ open, onOpenChange, onCreate, disabled }: {
 function SinglePageEditor({ document, current, pages, onBack, onSaved, onChange, onModify, onPageMetadataSaved, findOpen, onFindOpenChange, findShortcut }: { document: ProjectDocument; current: PageDocument; pages: Page[]; onBack: () => void; onSaved: (project: ProjectSummary) => void; onChange: (id: string) => Promise<void>; onModify: (action: PageAction, id?: string, target?: string) => Promise<void>; onPageMetadataSaved: (page: Page) => void; findOpen: boolean; onFindOpenChange: (open: boolean) => void; findShortcut: string }) {
   const { t } = useTranslation();
   const latest = useRef(current.markdown);
+  const componentHistory = useRef(createComponentEditHistory(current.markdown));
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const queue = useRef<Promise<void>>(Promise.resolve());
   const revision = useRef(0);
@@ -149,6 +151,9 @@ function SinglePageEditor({ document, current, pages, onBack, onSaved, onChange,
         }
       }
       latest.current = preservePagloraMarkers(current.getMarkdown());
+      // A Write-mode edit is not part of Components history. Never let Undo
+      // silently roll back an unrelated text edit or a stale ProseMirror tree.
+      componentHistory.current = createComponentEditHistory(latest.current);
       revision.current += 1;
       setSaveState("unsaved");
       if (saveTimer.current) clearTimeout(saveTimer.current);
@@ -156,29 +161,33 @@ function SinglePageEditor({ document, current, pages, onBack, onSaved, onChange,
     },
   });
 
+  /** Apply an exact source snapshot and let the existing serialized save queue
+   * persist it. A broken Tiptap parse cannot overwrite this Markdown.
+   */
+  function applyComponentSource(nextSource: string, boundary: number) {
+    latest.current = nextSource;
+    revision.current++;
+    rawSourceFallbackActive.current = true;
+    setSaveState("unsaved");
+    setSaveError("");
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    refreshComponents(n => n + 1);
+    setComponentBoundary(Math.min(boundary, parseSourceComponents(nextSource).blocks.length));
+    try {
+      editor?.commands.setContent(nextSource, { contentType: "markdown", emitUpdate: false });
+      editor?.state.doc.check();
+      rawSourceFallbackActive.current = false;
+    } catch { /* The original source remains authoritative. */ }
+    void persist().catch(() => undefined);
+  }
+
   function insertSourceComponent(kind: BlockKind, boundary: number): boolean {
     if (leaving || switchingView || viewMode === "site") return false;
     try {
-      // One source-owned model determines BOTH rendered insertion positions
-      // and exact saved Markdown offsets. Tiptap is not consulted.
-      const nextSource = insertComponentAtBoundary(latest.current, kind, boundary);
-      latest.current = nextSource;
-      revision.current++;
-      rawSourceFallbackActive.current = true;
-      setSaveState("unsaved");
-      setSaveError("");
-      if (saveTimer.current) clearTimeout(saveTimer.current);
-      refreshComponents(n => n + 1);
-      setComponentBoundary(Math.min(boundary + 1, parseSourceComponents(nextSource).blocks.length));
-
-      // Text Write mode can reuse a valid parse, but is never the authority
-      // for component positioning or persistence.
-      try {
-        editor?.commands.setContent(nextSource, { contentType: "markdown", emitUpdate: false });
-        editor?.state.doc.check();
-        rawSourceFallbackActive.current = false;
-      } catch { /* Source remains authoritative and safely saved. */ }
-      void persist().catch(() => undefined);
+      const before = latest.current;
+      const nextSource = insertComponentAtBoundary(before, kind, boundary);
+      componentHistory.current = recordComponentEdit(componentHistory.current, before, nextSource);
+      applyComponentSource(nextSource, boundary + 1);
       return true;
     } catch (error) {
       const reason = friendlyError(error);
@@ -187,6 +196,47 @@ function SinglePageEditor({ document, current, pages, onBack, onSaved, onChange,
       return false;
     }
   }
+
+  function undoComponentInsertion(): boolean {
+    if (leaving || switchingView || viewMode === "site") return false;
+    const next = undoComponentEdit(componentHistory.current, latest.current);
+    if (!next) return false;
+    componentHistory.current = next;
+    applyComponentSource(next.current, componentBoundary);
+    return true;
+  }
+
+  function redoComponentInsertion(): boolean {
+    if (leaving || switchingView || viewMode === "site") return false;
+    const next = redoComponentEdit(componentHistory.current, latest.current);
+    if (!next) return false;
+    componentHistory.current = next;
+    applyComponentSource(next.current, componentBoundary);
+    return true;
+  }
+
+  // Source-backed component history is separate from Tiptap's text history.
+  // Capture shortcuts only while Components is active and focus belongs to
+  // this project, never inside Monaco, text fields or portal dialogs.
+  useEffect(() => {
+    if (componentMode !== "compose" || viewMode === "site") return;
+    function componentHistoryShortcut(event: KeyboardEvent) {
+      if (!(event.ctrlKey || event.metaKey) || event.altKey) return;
+      const target = event.target;
+      if (!(target instanceof Element) ||
+          !target.closest("[data-paglora-project-root]") ||
+          target.closest('input, textarea, select, [contenteditable], [role="textbox"], [data-paglora-source-editor], [data-slot="dialog-content"]')) return;
+      const key = event.key.toLowerCase();
+      const undo = key === "z" && !event.shiftKey;
+      const redo = (key === "z" && event.shiftKey) || (key === "y" && !event.shiftKey);
+      if (!undo && !redo) return;
+      event.preventDefault();
+      if (undo) undoComponentInsertion();
+      else redoComponentInsertion();
+    }
+    window.addEventListener("keydown", componentHistoryShortcut);
+    return () => window.removeEventListener("keydown", componentHistoryShortcut);
+  }, [componentMode, viewMode, leaving, switchingView, editor, persist, componentBoundary]);
 
   // Desktop Ctrl+S saves the active Markdown file instead of opening WebView's
   // "Save page as..." dialog. The existing serialized autosave queue is reused.
@@ -318,6 +368,9 @@ function SinglePageEditor({ document, current, pages, onBack, onSaved, onChange,
         {componentMode === "compose" && (
           <SourceComponentCanvas source={latest.current}
             selectedBoundary={componentBoundary} onSelectBoundary={setComponentBoundary}
+            canUndo={componentHistory.current.current === latest.current && componentHistory.current.undo.length > 0}
+            canRedo={componentHistory.current.current === latest.current && componentHistory.current.redo.length > 0}
+            onUndo={undoComponentInsertion} onRedo={redoComponentInsertion}
             onEditText={() => { setComponentMode("write"); editor?.commands.focus(); }} />
         )}
         <div className={componentMode === "write" ? "relative min-h-full" :
@@ -399,6 +452,7 @@ function SinglePageEditor({ document, current, pages, onBack, onSaved, onChange,
                 // onUpdate so its old debounced autosave cannot overwrite it.
                 if (saveTimer.current) clearTimeout(saveTimer.current);
                 latest.current = markdown;
+                componentHistory.current = createComponentEditHistory(markdown);
                 revision.current += 1;
                 refreshComponents(n => n + 1);
                 setComponentBoundary(0);

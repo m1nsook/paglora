@@ -18,7 +18,7 @@ Paglora is an open-source, **local-first documentation studio**, built with Taur
 
 - **Visual Studio:** Markdown editor with autosave, pages and navigation, resizable Edit/Split/Canvas views, and desktop/tablet/mobile previews.
 - **Site design:** Local branding, theme colors, fonts, navigation, CSS, and light/dark site appearance independently of Studio's own theme.
-- **Documentation components:** Cards, callouts, steps, tabs, code groups, accordions, badges, and a searchable component library.
+- **Documentation components:** Cards, callouts, steps, tabs, code groups, accordions, badges, and a searchable component library. The source-backed Components canvas supports exact-position insertion and bounded Undo/Redo (buttons or Ctrl/Cmd+Z and Ctrl/Cmd+Shift+Z); editing Markdown in Write/Source starts a fresh component history.
 - **Local-first projects:** Offline documents and images, private drafts, local search, project backups and recoverable trash. Importing or exporting a portable `.paglora` backup shows its actual current stage without invented progress percentages; archive operations are serialized to prevent accidental duplicate imports.
 - **Static publishing:** Portable HTML/CSS/JS, search, mobile navigation, metadata and sitemap; private pages are excluded from exports.
 - **Languages:** Studio translations and independently configurable published-site language.

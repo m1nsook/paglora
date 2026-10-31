@@ -83,7 +83,8 @@ test("Studio composer uses the SAME real source boundaries for canvas and insert
   const app = read("src/App.tsx");
   const palette = read("src/components/editor/block-palette.tsx");
   const canvas = read("src/components/editor/source-component-canvas.tsx");
-  assert.match(app, /insertComponentAtBoundary\(latest\.current, kind, boundary\)/);
+  assert.match(app, /const before = latest\.current;/);
+  assert.match(app, /insertComponentAtBoundary\(before, kind, boundary\)/);
   assert.match(app, /SourceComponentCanvas source=\{latest\.current\}/);
   assert.match(app, /onInsert=\{insertSourceComponent\}/);
   assert.match(canvas, /parseSourceComponents\(source\)\.blocks/);
