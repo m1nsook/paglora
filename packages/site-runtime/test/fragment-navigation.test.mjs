@@ -159,3 +159,13 @@ test("TOC active marker ignores a closer heading inside a hidden tab", () => {
   assert.equal(app.links[0].attrs.get("aria-current"), "location", "revealed heading becomes active");
   assert.equal(app.links[1].attrs.has("aria-current"), false);
 });
+
+test("changing a tab directly refreshes the active TOC marker without scrolling", () => {
+  const app = run({ withToc: true });
+  assert.equal(app.links[1].attrs.get("aria-current"), "location");
+  app.content.tabs[1].listeners.click();
+  assert.equal(app.links[0].attrs.get("aria-current"), "location");
+  assert.equal(app.links[1].attrs.has("aria-current"), false);
+  app.content.tabs[0].listeners.click();
+  assert.equal(app.links[1].attrs.get("aria-current"), "location");
+});

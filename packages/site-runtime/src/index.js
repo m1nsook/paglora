@@ -33,6 +33,8 @@
   const codeGroups = [];
   // Fragment navigation can point inside a hidden code or content tab.
   const fragmentPanels = new Map();
+  // Once the TOC exists, tab changes should immediately refresh its marker.
+  let notifyVisibleHeadingChange = () => {};
   function codeLabel(value) {
     if (typeof value !== "string" || value.length > 100) return null;
     const normalized = value.trim().normalize("NFKC").toLocaleLowerCase();
@@ -231,6 +233,7 @@
       });
       if (focus) tabs[selected].focus();
       if (remember && labels[selected]) updateCodePreference(labels[selected], true);
+      notifyVisibleHeadingChange();
     }
     function activateLabel(label) {
       if (!label) { activate(0); return; }
@@ -297,6 +300,7 @@
         panels[index].hidden = !active;
       });
       if (focus) tabs[selected].focus();
+      notifyVisibleHeadingChange();
     }
     container.before(tablist);
     activate(0);
@@ -503,6 +507,7 @@
     scheduled = true;
     requestAnimationFrame(markActiveHeading);
   }
+  notifyVisibleHeadingChange = schedule;
   addEventListener("scroll", schedule, { passive: true });
   addEventListener("resize", schedule, { passive: true });
   addEventListener("hashchange", schedule);
