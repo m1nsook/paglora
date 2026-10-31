@@ -76,6 +76,7 @@
     "site.navigation.previous": "이전",
     "site.navigation.next": "다음",
     "site.navigation.skip": "본문으로 건너뛰기",
+    "site.navigation.backToTop": "맨 위로 이동",
     "docs.callout.note": "알림",
     "docs.callout.tip": "팁",
     "docs.callout.important": "중요",

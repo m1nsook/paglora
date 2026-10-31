@@ -29,6 +29,7 @@ Paglora is in early development. Desktop milestone numbers are separate from the
 - Search results highlight exact query terms in titles and excerpts with safe semantic marks, Unicode-aware offsets, technical-token matching and accessible accent/forced-colors styling. Offline public-only search and keyboard controls remain intact.
 
 ### Published documentation navigation
+- Added unobtrusive article reading progress and a keyboard-accessible Back to top control for long published pages, with reduced-motion, RTL, forced-colors and print support. Short pages and script-disabled previews remain unchanged.
 - Code example groups now remember the reader's selected language per deployed site path, synchronize matching examples on the current page and across browser tabs, and retain accessible keyboard controls. Unmatched groups, unrelated content tabs and script-disabled previews keep their existing behavior.
 - Improved small-screen Browse navigation with a scrollable, sticky, RTL-aware panel that overlays content rather than pushing long articles down. Native `<details>` keeps page links usable without scripts; progressive enhancement adds Escape dismissal, outside-click closing, and header-height tracking for wrapped headers.
 
