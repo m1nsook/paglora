@@ -333,8 +333,11 @@
       if (location.hash === hash) target.scrollIntoView?.({ block: "start" });
     });
   }
-  addEventListener("hashchange", revealFragmentTarget);
-  revealFragmentTarget();
+  // No tab groups means no fragment interception or extra global listener.
+  if (fragmentPanels.size) {
+    addEventListener("hashchange", revealFragmentTarget);
+    revealFragmentTarget();
+  }
 
   // Print and Save as PDF must include every example and FAQ answer, even
   // when interactive tabs/accordions are collapsed on screen. Keep an exact
