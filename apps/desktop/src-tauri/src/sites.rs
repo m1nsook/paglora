@@ -71,6 +71,15 @@ a:hover{color:var(--brand)}
 a:focus-visible,summary:focus-visible{outline:2px solid var(--brand);outline-offset:3px}
 .skip-link{position:absolute;z-index:100;top:-60px;left:10px;background:var(--bg);padding:8px 14px;border:1px solid var(--line);border-radius:8px}
 .skip-link:focus{top:10px}
+.paglora-reading-progress[hidden],.paglora-back-to-top[hidden]{display:none!important}
+.paglora-reading-progress{position:fixed;inset-block-start:0;inset-inline:0;z-index:55;height:3px;pointer-events:none}
+.paglora-reading-progress-fill{display:block;width:100%;height:100%;background:var(--brand);transform:scaleX(0);transform-origin:left center;transition:transform .08s linear}
+:root[dir="rtl"] .paglora-reading-progress-fill{transform-origin:right center}
+.paglora-back-to-top{position:fixed;inset-inline-end:clamp(16px,3vw,36px);bottom:calc(18px + env(safe-area-inset-bottom,0px));z-index:28;display:grid;place-items:center;width:44px;height:44px;padding:0;border:1px solid var(--line);border-radius:50%;background:var(--bg);color:var(--fg);box-shadow:0 8px 28px rgba(0,0,0,.15);font:inherit;font-size:22px;line-height:1;cursor:pointer}
+.paglora-back-to-top:hover{border-color:var(--brand);background:var(--subtle);color:var(--brand)}
+.paglora-back-to-top:focus-visible{outline:2px solid var(--brand);outline-offset:3px}
+@media(forced-colors:active){.paglora-reading-progress-fill{background:Highlight}.paglora-back-to-top{border-color:ButtonText}}
+@media(prefers-reduced-motion:reduce){.paglora-reading-progress-fill{transition:none}}
 .site-header{position:sticky;top:0;z-index:30;background:var(--header-bg);border-bottom:1px solid var(--line);backdrop-filter:blur(18px)}
 .site-header.not-sticky{position:relative}
 .paglora-appearance-toggle{flex-shrink:0;appearance:none;border:1px solid var(--line);border-radius:9px;background:var(--subtle);color:var(--fg);font:inherit;font-size:12px;font-weight:650;cursor:pointer;white-space:nowrap;padding:7px 11px;line-height:1.3}
@@ -469,7 +478,8 @@ a:focus-visible,summary:focus-visible{outline:2px solid var(--brand);outline-off
   body,:root[data-site-layout="inset"] body{background:#fff!important;color:#171717!important}
   .site-header,.mobile-nav,.site-nav,.on-this-page,.mobile-toc,.site-footer,
   .page-pager,.skip-link,.paglora-search-backdrop,.paglora-search-trigger,
-  .paglora-appearance-toggle,.paglora-copy-code,.paglora-heading-link{display:none!important}
+  .paglora-appearance-toggle,.paglora-copy-code,.paglora-heading-link,
+  .paglora-reading-progress,.paglora-back-to-top{display:none!important}
   :root .site-body,:root .site-body.nav-right,:root .site-body.nav-top,
   :root .site-body.layout-landing{
     display:block!important;width:100%!important;max-width:none!important;

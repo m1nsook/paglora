@@ -329,6 +329,83 @@
   });
   }
 
+
+  // Long articles get unobtrusive reading progress and a keyboard-accessible
+  // return-to-top control. Short pages and script-disabled exports stay readable.
+  const readingArticle = document.querySelector(".docs");
+  if (readingArticle && document.body && typeof readingArticle.getBoundingClientRect === "function") {
+    const progress = document.createElement("div");
+    progress.className = "paglora-reading-progress";
+    progress.setAttribute("aria-hidden", "true"); // decorative; never announce every scroll tick
+    const progressFill = document.createElement("span");
+    progressFill.className = "paglora-reading-progress-fill";
+    progress.appendChild(progressFill);
+
+    const backToTop = document.createElement("button");
+    backToTop.type = "button";
+    backToTop.className = "paglora-back-to-top";
+    backToTop.textContent = "↑";
+    backToTop.hidden = true;
+    const backLabel = tr("site.navigation.backToTop", "Back to top");
+    backToTop.setAttribute("aria-label", backLabel);
+    backToTop.title = backLabel;
+    document.body.appendChild(progress);
+    document.body.appendChild(backToTop);
+
+    let readingUpdateQueued = false;
+    function updateReadingPosition() {
+      readingUpdateQueued = false;
+      const bounds = readingArticle.getBoundingClientRect();
+      const viewport = typeof innerHeight === "number" ? innerHeight : root.clientHeight;
+      const y = typeof scrollY === "number" ? scrollY : root.scrollTop;
+      if (!Number.isFinite(viewport) || viewport <= 0 ||
+          !Number.isFinite(y) || !Number.isFinite(bounds.top) ||
+          !Number.isFinite(bounds.bottom) || !Number.isFinite(bounds.height)) {
+        progress.hidden = true;
+        backToTop.hidden = true;
+        return;
+      }
+      // Hide both controls on short pages where a progress meter is misleading.
+      const longArticle = bounds.height >= Math.max(900, viewport * 1.35);
+      progress.hidden = !longArticle;
+      backToTop.hidden = !longArticle || y < Math.max(320, viewport * 0.45);
+      if (!longArticle) return;
+      const articleStart = bounds.top + y;
+      const articleEnd = bounds.bottom + y;
+      const start = Math.max(0, articleStart - 140);
+      const end = Math.max(start + 1, articleEnd - viewport + 100);
+      const fraction = Math.max(0, Math.min(1, (y - start) / (end - start)));
+      progressFill.style.transform = "scaleX(" + (Math.round(fraction * 1000) / 1000) + ")";
+    }
+    function scheduleReadingUpdate() {
+      if (readingUpdateQueued) return;
+      readingUpdateQueued = true;
+      requestAnimationFrame(updateReadingPosition);
+    }
+    backToTop.addEventListener("click", () => {
+      // Prevent keyboard/screen-reader focus from remaining on a hidden button.
+      const main = document.getElementById?.("content");
+      if (main?.focus) {
+        if (!main.hasAttribute?.("tabindex")) main.setAttribute("tabindex", "-1");
+        main.focus({ preventScroll: true });
+      }
+      let reduceMotion = false;
+      try {
+        reduceMotion = typeof matchMedia === "function" &&
+          matchMedia("(prefers-reduced-motion: reduce)").matches;
+      } catch { /* no motion preference API: browser smooth scrolling is fine */ }
+      if (typeof scrollTo === "function") {
+        scrollTo({ top: 0, behavior: reduceMotion ? "auto" : "smooth" });
+      }
+    });
+    addEventListener("scroll", scheduleReadingUpdate, { passive: true });
+    addEventListener("resize", scheduleReadingUpdate, { passive: true });
+    if (typeof ResizeObserver !== "undefined") {
+      new ResizeObserver(scheduleReadingUpdate).observe(readingArticle);
+    }
+    scheduleReadingUpdate();
+  }
+
   // Expose sharable heading anchors without changing project Markdown.
   for (const heading of document.querySelectorAll?.(".docs h2[id], .docs h3[id], .docs h4[id]") ?? []) {
     const id = heading.getAttribute("id");

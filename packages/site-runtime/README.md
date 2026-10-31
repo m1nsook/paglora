@@ -41,3 +41,10 @@ Published Ctrl/Cmd+K search highlights exact query terms in result titles and ex
 On any published page, use the browser's **Print** command (Ctrl+P / Cmd+P) and choose a printer or **Save as PDF**. Paglora's print stylesheet removes the navigation, table of contents, footer, page pager, search controls and other interactive chrome. It uses a high-contrast white paper layout regardless of the reader's selected dark theme, keeps code and tables readable, and respects the browser's normal page breaks. This works offline and requires no print service or account.
 
 When JavaScript is enabled, the first-party runtime temporarily opens FAQ/disclosure answers and reveals **all** code-group and content-tab panels for printing, then restores their original open/selected state after printing. Without JavaScript, the print stylesheet still formats the visible static article and all script-free tab examples; closed native disclosures may remain collapsed. The same styles apply in exported HTML and the script-disabled Studio preview. Only the current page is printed; printing does not include private project pages or change saved Markdown.
+
+
+## Long-page reading navigation
+
+On long public documentation pages, the optional browser runtime shows a thin accent-colored **reading progress bar** at the top and a **Back to top** button after scrolling. The progress follows the article rather than the footer, and short pages do not show misleading controls. The button is keyboard accessible, moves focus back to the main content and respects reduced-motion preferences. The bar is decorative (not repeatedly announced to screen readers); RTL pages reverse its fill direction, and high-contrast palettes retain visibility.
+
+These controls are local, require no account, storage, tracking or network access, and are not included in Print/Save as PDF. With JavaScript disabled, the article, native links and table of contents continue to work normally. Custom site CSS can override the first-party classes for reading progress and back-to-top.
